@@ -19,6 +19,12 @@ chmod +x scripts/install.sh
 npm start
 ```
 
-前端在 `frontend/` 目录：`npm install` 后 `npm run build` / `npm run dev`，详见 [frontend/README.md](frontend/README.md)。
+**是否启动成功**：终端出现 `Backend running at http://localhost:端口` 后，另开终端（端口以 `.env` 里 `PORT` 为准，默认 `3001`）：
 
-更多后端说明见 [backend/README.md](backend/README.md)。
+```bash
+curl -sf "http://127.0.0.1:3001/" && echo " OK"
+```
+
+能返回一段 JSON（含欢迎语）即正常。**常驻运行、开机自启动**（systemd / PM2）见 [backend/README.md](backend/README.md)。
+
+前端在 `frontend/` 目录：`npm install` 后 `npm run build` / `npm run dev`，详见 [frontend/README.md](frontend/README.md)。
