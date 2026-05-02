@@ -4,7 +4,7 @@ Node + MySQL 后端，Vite + React 前端。
 
 ## Linux 上跑起来
 
-**环境**：Node.js **18+**、MySQL（已建好库与用户）。
+**环境**：Node.js **16+**（后端）、MySQL（已建好库与用户）。前端本地构建若工具链报错，可改用 Node 18+。
 
 ```bash
 git clone https://github.com/tenxunwx/dou-nai-assistant.git

@@ -2,6 +2,7 @@
 /**
  * 后端一键安装向导（数据库连通性、建表、首个管理员）。
  * 由 scripts/install.sh 调用；也可在 backend 目录执行：node scripts/install.js
+ * 需要 Node.js 16+（与后端运行时一致）。
  */
 const fs = require('fs')
 const path = require('path')

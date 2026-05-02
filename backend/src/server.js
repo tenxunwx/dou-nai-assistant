@@ -1,3 +1,4 @@
+require('./polyfills')
 const app = require('./app')
 const { port, nodeEnv } = require('./config/env')
 const { initDatabase } = require('./config/db')

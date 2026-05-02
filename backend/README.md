@@ -21,7 +21,7 @@ node scripts/install.js
 
 ## 前置条件
 
-- Node.js **18+**
+- Node.js **16+**（推荐 LTS；Node 16 无内置 `fetch`，启动时已通过 `undici` 自动垫片）
 - 已创建好的 **MySQL 数据库** 及对该库有权限的 **用户**（向导不负责 `CREATE DATABASE`）
 
 ## 生产环境提示
