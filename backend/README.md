@@ -19,6 +19,27 @@ npm run install:backend
 node scripts/install.js
 ```
 
+## 仅数据库增量迁移（不启动服务）
+
+在已配置 `.env` 的机器上、于 `backend` 目录执行（与启动时 `initDatabase` 相同，**不删数据**）：
+
+```bash
+npm run apply-db
+# 或
+node scripts/apply-db.js
+```
+
+## 一键更新（git + 依赖 + 迁移 + 可选 PM2/前端）
+
+在**仓库根目录**执行：
+
+```bash
+chmod +x scripts/update.sh
+./scripts/update.sh
+```
+
+详见仓库根 [README.md](../README.md) 说明。
+
 ## 前置条件
 
 - Node.js **16+**（推荐 LTS；Node 16 无内置 `fetch`，启动时已通过 `undici` 自动垫片）

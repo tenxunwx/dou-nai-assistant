@@ -28,3 +28,14 @@ curl -sf "http://127.0.0.1:3001/" && echo " OK"
 能返回一段 JSON（含欢迎语）即正常。**常驻运行、开机自启动**（systemd / PM2）见 [backend/README.md](backend/README.md)。
 
 前端在 `frontend/` 目录：`npm install` 后 `npm run build` / `npm run dev`。生产环境若出现「网络异常」，多半是未把 **`/api` 反代到后端**，见 [frontend/README.md](frontend/README.md) 联调说明。
+
+## 服务器上更新（不丢数据库）
+
+在**仓库根目录**（含 `scripts/update.sh`）执行：
+
+```bash
+chmod +x scripts/update.sh
+./scripts/update.sh
+```
+
+会先显示 `backend/.env` 里的数据库连接（密码隐藏），核对后回车；再 `git pull`、后端 `npm install`、**增量迁移数据库**（只补表/列，与启动时 `initDatabase` 相同），可选 PM2 重启与前端构建。详见 [backend/README.md](backend/README.md)。
