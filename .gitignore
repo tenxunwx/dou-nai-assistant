@@ -1,0 +1,20 @@
+# Dependencies
+**/node_modules/
+
+# Secrets / local env
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Build
+**/dist/
+**/dist-ssr/
+
+# Logs & OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editor (keep optional team snippets)
+.idea/
