@@ -5,8 +5,12 @@
  */
 const fs = require('fs')
 const path = require('path')
+const net = require('net')
 const crypto = require('crypto')
 const readline = require('readline')
+
+/** 安装向导扫描的 5 个候选 HTTP 端口（本机试绑，避免与常见占用冲突） */
+const HTTP_PORT_CANDIDATES = [3001, 3002, 3003, 3004, 3005]
 
 const ROOT = path.join(__dirname, '..')
 const ENV_PATH = path.join(ROOT, '.env')
@@ -44,6 +48,78 @@ async function testMysql({ host, port, user, password, database }) {
   }
 }
 
+/** 本机是否可监听该端口（不可监听则视为已被占用或不可用） */
+function isPortFree(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer()
+    const finish = (ok) => {
+      server.removeAllListeners()
+      try {
+        server.close()
+      } catch (_) {
+        /* ignore */
+      }
+      resolve(ok)
+    }
+    server.once('error', () => finish(false))
+    server.listen({ port, host: '0.0.0.0' }, () => {
+      server.close(() => finish(true))
+    })
+  })
+}
+
+async function chooseHttpPort() {
+  console.log('\n正在扫描本机后端 HTTP 端口（共 5 个候选）…\n')
+  const rows = []
+  for (const p of HTTP_PORT_CANDIDATES) {
+    const free = await isPortFree(p)
+    rows.push({ port: p, free })
+    console.log(`  ${p}  —— ${free ? '空闲' : '占用'}`)
+  }
+  const recommended = rows.find((r) => r.free)
+
+  if (recommended) {
+    console.log(`\n推荐使用: ${recommended.port}（首个检测为空闲的端口）`)
+    const raw = ((await question('回车直接采用推荐端口，或输入候选列表中的某一「空闲」端口号: ')) || '').trim()
+    if (!raw) {
+      return String(recommended.port)
+    }
+    const n = Number(raw)
+    if (!Number.isInteger(n) || n < 1 || n > 65535) {
+      console.error('端口号无效，须为 1–65535 的整数')
+      process.exit(1)
+    }
+    const picked = rows.find((r) => r.port === n)
+    if (picked) {
+      if (!picked.free) {
+        console.error(`端口 ${n} 当前为占用状态，请选空闲端口或回车使用推荐 ${recommended.port}`)
+        process.exit(1)
+      }
+      return String(n)
+    }
+    const ok = await isPortFree(n)
+    if (!ok) {
+      console.error(`端口 ${n} 不可用或已被占用，请更换`)
+      process.exit(1)
+    }
+    return String(n)
+  }
+
+  console.log('\n上述 5 个候选端口均被占用（或不可绑定）。')
+  const raw = ((await question('请手动输入要使用的 HTTP 端口（1–65535）: ')) || '').trim()
+  const n = Number(raw)
+  if (!Number.isInteger(n) || n < 1 || n > 65535) {
+    console.error('端口号无效')
+    process.exit(1)
+  }
+  const ok = await isPortFree(n)
+  if (!ok) {
+    console.error(`端口 ${n} 仍不可用或已被占用，请关闭占用进程后重试安装`)
+    process.exit(1)
+  }
+  return String(n)
+}
+
 async function main() {
   console.log('\n======== 万米画布 / 豆奶助手 — 后端安装向导 ========\n')
   console.log('请提前在 MySQL 中创建好「数据库」及拥有该库权限的「用户」。\n')
@@ -71,7 +147,9 @@ async function main() {
     process.exit(1)
   }
 
-  const port = ((await question(`HTTP 端口 [3001]: `)) || '').trim() || '3001'
+  const port = await chooseHttpPort()
+  console.log(`\n已选择后端 HTTP 端口: ${port}\n`)
+
   const nodeEnv = ((await question(`NODE_ENV [production]: `)) || '').trim() || 'production'
   const jwtSecret = ((await question(`JWT_SECRET（回车随机生成）: `)) || '').trim() || randomSecret()
   const publicAppUrl = ((await question('PUBLIC_APP_URL 对外 API 根（易支付 notify，可回车跳过）: ')) || '').trim()
