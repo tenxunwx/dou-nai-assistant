@@ -12,8 +12,9 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import type { MouseEvent, PointerEvent, WheelEvent } from 'react'
+import type { MouseEvent, PointerEvent as ReactPointerEvent, WheelEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { apiFetch } from './apiFetch'
 
 type CanvasImage = {
   id: string
@@ -253,7 +254,7 @@ function App() {
 
   useEffect(() => {
     if (!factoryMobilePick) return
-    const onPointerDown = (event: PointerEvent) => {
+    const onPointerDown = (event: globalThis.PointerEvent) => {
       if (factoryMobilePickersRef.current?.contains(event.target as Node)) return
       setFactoryMobilePick(null)
     }
@@ -286,7 +287,7 @@ function App() {
   useEffect(() => {
     const loadSite = async () => {
       try {
-        const r = await fetch('/api/site')
+        const r = await apiFetch('/api/site')
         if (!r.ok) return
         const d = await r.json()
         if (d?.siteTitle) setAppSiteTitle(String(d.siteTitle))
@@ -310,8 +311,8 @@ function App() {
       try {
         const headers = { Authorization: `Bearer ${authToken}` }
         const [meResp, ordResp] = await Promise.all([
-          fetch('/api/auth/me', { headers }),
-          fetch('/api/pay/my-recharges', { headers }),
+          apiFetch('/api/auth/me', { headers }),
+          apiFetch('/api/pay/my-recharges', { headers }),
         ])
         if (meResp.ok) {
           const meData = await meResp.json()
@@ -342,7 +343,7 @@ function App() {
     if (!authToken || activeMenu !== 'recharge') return
     const loadPay = async () => {
       try {
-        const r = await fetch('/api/pay/config', { headers: { Authorization: `Bearer ${authToken}` } })
+        const r = await apiFetch('/api/pay/config', { headers: { Authorization: `Bearer ${authToken}` } })
         if (!r.ok) {
           setPayEnabled(false)
           return
@@ -361,7 +362,7 @@ function App() {
     let cancelled = false
     ;(async () => {
       try {
-        const r = await fetch('/api/pay/my-recharges', { headers: { Authorization: `Bearer ${authToken}` } })
+        const r = await apiFetch('/api/pay/my-recharges', { headers: { Authorization: `Bearer ${authToken}` } })
         if (!r.ok || cancelled) return
         const d = (await r.json()) as { items?: RechargeOrderRow[] }
         if (!cancelled && Array.isArray(d.items)) setRechargeOrders(d.items)
@@ -379,7 +380,7 @@ function App() {
     if (!authToken || activeMenu !== 'recharge') return
     const tick = async () => {
       try {
-        const r = await fetch('/api/pay/my-recharges', { headers: { Authorization: `Bearer ${authToken}` } })
+        const r = await apiFetch('/api/pay/my-recharges', { headers: { Authorization: `Bearer ${authToken}` } })
         if (!r.ok) return
         const d = (await r.json()) as { items?: RechargeOrderRow[] }
         if (Array.isArray(d.items)) setRechargeOrders(d.items)
@@ -398,7 +399,7 @@ function App() {
     setAdminUsersError('')
     ;(async () => {
       try {
-        const r = await fetch('/api/admin/users', { headers: { Authorization: `Bearer ${authToken}` } })
+        const r = await apiFetch('/api/admin/users', { headers: { Authorization: `Bearer ${authToken}` } })
         const raw = await r.text()
         if (cancelled) return
         let d: { items?: AdminListUser[]; error?: string } = {}
@@ -467,11 +468,11 @@ function App() {
       try {
         const headers = { Authorization: `Bearer ${authToken}` }
         const [canvasResp, configResp, meResp, recordsResp, systemResp] = await Promise.all([
-          fetch('/api/canvases', { headers }),
-          fetch('/api/settings/interfaces', { headers }),
-          fetch('/api/auth/me', { headers }),
-          fetch('/api/records', { headers }),
-          fetch('/api/settings/system', { headers }),
+          apiFetch('/api/canvases', { headers }),
+          apiFetch('/api/settings/interfaces', { headers }),
+          apiFetch('/api/auth/me', { headers }),
+          apiFetch('/api/records', { headers }),
+          apiFetch('/api/settings/system', { headers }),
         ])
 
         if (canvasResp.ok) {
@@ -598,7 +599,7 @@ function App() {
       try {
         const responses = await Promise.all(
           canvases.map((canvas) =>
-            fetch(`/api/canvases/${canvas.id}`, {
+            apiFetch(`/api/canvases/${canvas.id}`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
@@ -705,7 +706,7 @@ function App() {
 
   const loadInterfaceConfigs = async () => {
     if (!authToken) return
-    const response = await fetch('/api/settings/interfaces', {
+    const response = await apiFetch('/api/settings/interfaces', {
       headers: { Authorization: `Bearer ${authToken}` },
     })
     if (!response.ok) return
@@ -715,7 +716,7 @@ function App() {
 
   const loadGenerationRecords = async () => {
     if (!authToken) return
-    const response = await fetch('/api/records', {
+    const response = await apiFetch('/api/records', {
       headers: { Authorization: `Bearer ${authToken}` },
     })
     if (!response.ok) return
@@ -727,7 +728,7 @@ function App() {
     if (!authToken) return
     setSettingsError('')
     try {
-      const response = await fetch('/api/settings/interfaces', {
+      const response = await apiFetch('/api/settings/interfaces', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -757,7 +758,7 @@ function App() {
 
   const handleDeleteInterfaceConfig = async (id: number) => {
     if (!authToken) return
-    await fetch(`/api/settings/interfaces/${id}`, {
+    await apiFetch(`/api/settings/interfaces/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${authToken}` },
     })
@@ -768,7 +769,7 @@ function App() {
     if (!authToken) return
     setSettingsError('')
     try {
-      const response = await fetch('/api/settings/system', {
+      const response = await apiFetch('/api/settings/system', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -836,7 +837,7 @@ function App() {
     }
     setRechargeSubmitting(true)
     try {
-      const response = await fetch('/api/pay/create-recharge', {
+      const response = await apiFetch('/api/pay/create-recharge', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -891,7 +892,7 @@ function App() {
     setAdminModalLoading(true)
     setAdminUsersError('')
     try {
-      const r = await fetch(`/api/admin/users/${userMgmtModal.user.id}/balance`, {
+      const r = await apiFetch(`/api/admin/users/${userMgmtModal.user.id}/balance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -925,7 +926,7 @@ function App() {
     setAdminModalLoading(true)
     setAdminHistoryRows([])
     try {
-      const r = await fetch(`/api/admin/users/${user.id}/balance-history`, {
+      const r = await apiFetch(`/api/admin/users/${user.id}/balance-history`, {
         headers: { Authorization: `Bearer ${authToken}` },
       })
       const raw = await r.text()
@@ -945,7 +946,7 @@ function App() {
     setAdminModalLoading(true)
     setAdminGenRows([])
     try {
-      const r = await fetch(`/api/admin/users/${user.id}/generation-records`, {
+      const r = await apiFetch(`/api/admin/users/${user.id}/generation-records`, {
         headers: { Authorization: `Bearer ${authToken}` },
       })
       const raw = await r.text()
@@ -976,7 +977,7 @@ function App() {
     if (!authToken) return
     setAdminUsersError('')
     try {
-      const r = await fetch(`/api/admin/users/${user.id}/banned`, {
+      const r = await apiFetch(`/api/admin/users/${user.id}/banned`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1001,7 +1002,7 @@ function App() {
     if (!window.confirm(`确定将用户「${user.username}」的密码重置为 123456？`)) return
     setAdminUsersError('')
     try {
-      const r = await fetch(`/api/admin/users/${user.id}/reset-password`, {
+      const r = await apiFetch(`/api/admin/users/${user.id}/reset-password`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${authToken}` },
       })
@@ -1051,7 +1052,7 @@ function App() {
     setAuthError('')
     try {
       const path = authMode === 'login' ? '/api/auth/login' : '/api/auth/register'
-      const response = await fetch(path, {
+      const response = await apiFetch(path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -1087,7 +1088,7 @@ function App() {
     if (!prompt || avatarGenerating) return
     setAvatarGenerating(true)
     try {
-      const response = await fetch('/api/avatars/generate', {
+      const response = await apiFetch('/api/avatars/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1114,7 +1115,7 @@ function App() {
 
   const handleApplyAvatar = () => {
     if (!authUser || !selectedAvatarUrl) return
-    fetch('/api/auth/avatar', {
+    apiFetch('/api/auth/avatar', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -1133,7 +1134,7 @@ function App() {
 
   const loadAvatarRepo = async () => {
     if (!authToken) return
-    const response = await fetch('/api/avatars', {
+    const response = await apiFetch('/api/avatars', {
       headers: { Authorization: `Bearer ${authToken}` },
     })
     if (!response.ok) return
@@ -1348,8 +1349,6 @@ function App() {
     return { x: rightMost.x + 324, y: source.y }
   }
 
-  const getModifyPosition = (sourceId: string) => getModifyPositionOnCanvas(dreamCanvas, sourceId)
-
   const getImageAspectRatio = (size: string) => {
     const match = /^(\d+)x(\d+)$/.exec(size)
     if (!match) return 1
@@ -1396,7 +1395,7 @@ function App() {
 
     for (let i = 0; i < maxAttempts; i += 1) {
       await new Promise((resolve) => window.setTimeout(resolve, intervalMs))
-      const response = await fetch(`/api/images/task/${taskId}`, {
+      const response = await apiFetch(`/api/images/task/${taskId}`, {
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
       })
       const rawText = await response.text()
@@ -1453,7 +1452,7 @@ function App() {
   }
 
   const generateImageRequest = async (prompt: string, size: string, model: string, urls: string[]) => {
-    const response = await fetch('/api/images/generate', {
+    const response = await apiFetch('/api/images/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1638,7 +1637,7 @@ function App() {
     }
 
     const fetchAsBlob = async (credentials: RequestCredentials) => {
-      const res = await fetch(imageUrl, {
+      const res = await apiFetch(imageUrl, {
         mode: 'cors',
         credentials,
         cache: 'no-store',
@@ -1668,7 +1667,7 @@ function App() {
     try {
       if (!authToken) throw new Error('no auth')
       const proxy = `/api/images/download-proxy?url=${encodeURIComponent(imageUrl)}`
-      const res = await fetch(proxy, {
+      const res = await apiFetch(proxy, {
         headers: { Authorization: `Bearer ${authToken}` },
         credentials: 'include',
         cache: 'no-store',
@@ -1701,7 +1700,7 @@ function App() {
     try {
       const form = new FormData()
       form.append('image', file)
-      const response = await fetch('/api/images/upload', {
+      const response = await apiFetch('/api/images/upload', {
         method: 'POST',
         headers: { Authorization: `Bearer ${authToken}` },
         body: form,
@@ -1733,7 +1732,7 @@ function App() {
   ) => {
     window.setTimeout(async () => {
       try {
-        const response = await fetch('/api/images/import-from-urls', {
+        const response = await apiFetch('/api/images/import-from-urls', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1761,7 +1760,7 @@ function App() {
     setAlbumCandidates([])
     setSelectedAlbumUrls([])
     try {
-      const response = await fetch('/api/images/parse-album', {
+      const response = await apiFetch('/api/images/parse-album', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1798,7 +1797,7 @@ function App() {
     setAlbumImporting(true)
     setAlbumParseError('')
     try {
-      const response = await fetch('/api/images/import-from-urls', {
+      const response = await apiFetch('/api/images/import-from-urls', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1881,13 +1880,13 @@ function App() {
     return { costYuan }
   }
 
-  const handleCanvasPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+  const handleCanvasPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     setIsPanning(true)
     setPanStart({ x: event.clientX, y: event.clientY, originX: viewport.x, originY: viewport.y })
     setSelectedImageId(null)
   }
 
-  const handleCanvasPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+  const handleCanvasPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!isPanning) return
     const deltaX = event.clientX - panStart.x
     const deltaY = event.clientY - panStart.y
