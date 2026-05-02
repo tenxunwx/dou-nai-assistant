@@ -24,6 +24,7 @@ echo "以下从 $BACKEND/.env 读取（请核对是否为当前要保留的数�
 node -e "
 const path = require('path');
 const root = process.argv[1];
+process.chdir(root);
 require('dotenv').config({ path: path.join(root, '.env') });
 const h = process.env.DB_HOST || '(空，将用 env 默认)';
 const p = process.env.DB_PORT || '(空，将用 3306)';
