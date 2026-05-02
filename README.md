@@ -31,9 +31,31 @@ curl -sf "http://127.0.0.1:3001/" && echo " OK"
 
 ## 服务器上更新（不丢数据库）
 
-在**仓库根目录**（含 `scripts/update.sh`）执行：
+**目录说明（不要进错文件夹）：** `update.sh` 在**仓库根目录**下的 `scripts/`，与 `backend/`、`frontend/` **同级**；**不在** `backend/scripts/` 里（那里只有 `install.sh`、`apply-db.js`）。
+
+```
+dou-nai-assistant/              ← 在这里执行 update.sh
+├── scripts/
+│   └── update.sh
+├── backend/
+│   └── scripts/
+│       ├── install.sh
+│       └── apply-db.js
+└── frontend/
+```
+
+在**仓库根**执行：
 
 ```bash
+cd /path/to/dou-nai-assistant    # 含 backend、frontend、scripts 的那一层
+chmod +x scripts/update.sh
+./scripts/update.sh
+```
+
+若你当前在 `backend` 目录里，要先上一级再执行：
+
+```bash
+cd ..
 chmod +x scripts/update.sh
 ./scripts/update.sh
 ```

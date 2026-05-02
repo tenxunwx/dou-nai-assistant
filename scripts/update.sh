@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # 服务器一键更新：展示 .env 数据库信息供核对 → git pull → 后端依赖 → 增量迁移（不删数据）→ 可选 PM2 / 前端构建
+#
+# 位置：本文件在「仓库根目录」的 scripts/（与 backend/、frontend/ 同级），不在 backend/scripts/。
+# 请在含 backend、frontend、scripts 的那一层执行：./scripts/update.sh
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"

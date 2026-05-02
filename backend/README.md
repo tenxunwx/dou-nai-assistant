@@ -31,11 +31,20 @@ node scripts/apply-db.js
 
 ## 一键更新（git + 依赖 + 迁移 + 可选 PM2/前端）
 
-在**仓库根目录**执行：
+**注意：`update.sh` 不在 `backend/scripts/`**，而在**上一级仓库根**的 `scripts/update.sh`（与 `backend/`、`frontend/` 同级）。若只在「后端文件夹」里找会看不到。
+
+在**仓库根目录**（能看到 `backend`、`frontend`、`scripts` 三个目录的那一层）执行：
 
 ```bash
+cd ..                              # 若你当前在 backend 目录，先回到仓库根
 chmod +x scripts/update.sh
 ./scripts/update.sh
+```
+
+直接路径示例（任选其一）：
+
+```bash
+/path/to/dou-nai-assistant/scripts/update.sh
 ```
 
 详见仓库根 [README.md](../README.md) 说明。
