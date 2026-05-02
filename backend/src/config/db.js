@@ -50,6 +50,32 @@ const initDatabase = async () => {
       throw error
     }
   }
+  try {
+    await pool.query('ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL')
+  } catch (error) {
+    if (!['ER_DUP_FIELDNAME', 'ER_CANT_DROP_FIELD_OR_KEY'].includes(error.code)) {
+      throw error
+    }
+  }
+  try {
+    await pool.query('CREATE UNIQUE INDEX uk_users_email ON users (email)')
+  } catch (error) {
+    if (!['ER_DUP_KEYNAME', 'ER_CANT_DROP_FIELD_OR_KEY'].includes(error.code)) {
+      throw error
+    }
+  }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS register_email_codes (
+      id BIGINT PRIMARY KEY AUTO_INCREMENT,
+      email VARCHAR(255) NOT NULL,
+      code VARCHAR(12) NOT NULL,
+      expires_at DATETIME NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_email_created (email, created_at),
+      KEY idx_expires (expires_at)
+    )
+  `)
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS api_configs (
@@ -244,7 +270,7 @@ const initDatabase = async () => {
        email_subject_template, email_html_template
      )
      VALUES (
-       1, 1, 'default', 'custom', 0, 0,
+       1, 1, 'email_verification', 'custom', 1, 0,
        '【万米画布】邮箱验证码',
        '<div style="font-family:Arial,sans-serif;line-height:1.6"><h2>欢迎使用万米画布</h2><p>你的验证码是：<b>{{code}}</b></p><p>5分钟内有效，请勿泄露给他人。</p></div>'
      )

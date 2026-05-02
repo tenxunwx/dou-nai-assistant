@@ -65,6 +65,7 @@ type AuthUser = {
   avatarUrl?: string
   balanceCents?: number
   banned?: boolean
+  email?: string | null
 }
 
 type AdminListUser = {
@@ -150,6 +151,14 @@ function App() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [authUsername, setAuthUsername] = useState('')
   const [authPassword, setAuthPassword] = useState('')
+  const [authRegisterEmail, setAuthRegisterEmail] = useState('')
+  const [authRegisterCode, setAuthRegisterCode] = useState('')
+  const [registerSendCooldown, setRegisterSendCooldown] = useState(0)
+  const [registerSendBusy, setRegisterSendBusy] = useState(false)
+  const [publicRegisterMode, setPublicRegisterMode] = useState<'default' | 'email_verification'>(
+    'email_verification',
+  )
+  const [publicAllowRegister, setPublicAllowRegister] = useState(true)
   const [authError, setAuthError] = useState('')
   const [authSubmitting, setAuthSubmitting] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -176,9 +185,9 @@ function App() {
     epayKey: '',
     epayKeySet: false,
     allowUserRegister: true,
-    registerMode: 'default' as 'default' | 'email_verification',
+    registerMode: 'email_verification' as 'default' | 'email_verification',
     emailProvider: 'custom' as 'custom' | 'qq',
-    emailVerificationEnabled: false,
+    emailVerificationEnabled: true,
     smtpHost: '',
     smtpPort: '',
     smtpSecure: false,
@@ -289,14 +298,32 @@ function App() {
       try {
         const r = await apiFetch('/api/site')
         if (!r.ok) return
-        const d = await r.json()
+        const d = (await r.json()) as {
+          siteTitle?: string
+          registerMode?: string
+          allowUserRegister?: boolean
+        }
         if (d?.siteTitle) setAppSiteTitle(String(d.siteTitle))
+        setPublicRegisterMode(d.registerMode === 'email_verification' ? 'email_verification' : 'default')
+        setPublicAllowRegister(d.allowUserRegister !== false)
       } catch {
         /* ignore */
       }
     }
     loadSite()
   }, [])
+
+  useEffect(() => {
+    if (registerSendCooldown <= 0) return
+    const t = window.setInterval(() => {
+      setRegisterSendCooldown((c) => (c <= 1 ? 0 : c - 1))
+    }, 1000)
+    return () => window.clearInterval(t)
+  }, [registerSendCooldown])
+
+  useEffect(() => {
+    if (!publicAllowRegister) setAuthMode('login')
+  }, [publicAllowRegister])
 
   useEffect(() => {
     document.title = appSiteTitle
@@ -1040,6 +1067,40 @@ function App() {
     }))
   }
 
+  const handleSendRegisterCode = async () => {
+    const email = authRegisterEmail.trim()
+    if (!email) {
+      setAuthError('请先填写邮箱')
+      return
+    }
+    setRegisterSendBusy(true)
+    setAuthError('')
+    try {
+      const response = await apiFetch('/api/auth/register/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const raw = await response.text()
+      let data: { error?: string } = {}
+      try {
+        data = raw ? (JSON.parse(raw) as typeof data) : {}
+      } catch {
+        setAuthError('服务器响应异常')
+        return
+      }
+      if (!response.ok) {
+        setAuthError(data.error || '发送失败')
+        return
+      }
+      setRegisterSendCooldown(60)
+    } catch {
+      setAuthError('网络异常，请稍后重试')
+    } finally {
+      setRegisterSendBusy(false)
+    }
+  }
+
   const handleAuthSubmit = async () => {
     const username = authUsername.trim()
     const password = authPassword.trim()
@@ -1047,15 +1108,32 @@ function App() {
       setAuthError('用户名和密码不能为空')
       return
     }
+    if (
+      authMode === 'register' &&
+      publicRegisterMode === 'email_verification' &&
+      (!authRegisterEmail.trim() || !authRegisterCode.trim())
+    ) {
+      setAuthError('请填写邮箱与验证码')
+      return
+    }
 
     setAuthSubmitting(true)
     setAuthError('')
     try {
       const path = authMode === 'login' ? '/api/auth/login' : '/api/auth/register'
+      const body =
+        authMode === 'register' && publicRegisterMode === 'email_verification'
+          ? {
+              username,
+              password,
+              email: authRegisterEmail.trim(),
+              emailCode: authRegisterCode.trim(),
+            }
+          : { username, password }
       const response = await apiFetch(path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(body),
       })
       const raw = await response.text()
       let data: { error?: string; code?: string; token?: string; user?: AuthUser } = {}
@@ -1076,6 +1154,8 @@ function App() {
       persistAuth(data.token, data.user)
       setAuthPassword('')
       setAuthUsername('')
+      setAuthRegisterEmail('')
+      setAuthRegisterCode('')
     } catch {
       setAuthError('网络异常，请稍后重试')
     } finally {
@@ -1933,6 +2013,34 @@ function App() {
               placeholder="密码（至少6位）"
               className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950"
             />
+            {authMode === 'register' && publicRegisterMode === 'email_verification' && (
+              <>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={authRegisterEmail}
+                  onChange={(event) => setAuthRegisterEmail(event.target.value)}
+                  placeholder="邮箱（用于接收验证码）"
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950"
+                />
+                <div className="flex gap-2">
+                  <input
+                    value={authRegisterCode}
+                    onChange={(event) => setAuthRegisterCode(event.target.value)}
+                    placeholder="邮箱验证码"
+                    className="min-w-0 flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendRegisterCode}
+                    disabled={registerSendBusy || registerSendCooldown > 0}
+                    className="shrink-0 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-700 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    {registerSendCooldown > 0 ? `${registerSendCooldown}s` : registerSendBusy ? '发送中…' : '发送验证码'}
+                  </button>
+                </div>
+              </>
+            )}
             {authError && <div className="text-sm text-red-500">{authError}</div>}
             <button
               onClick={handleAuthSubmit}
@@ -1941,12 +2049,19 @@ function App() {
             >
               {authSubmitting ? '提交中...' : authMode === 'login' ? '登录' : '注册'}
             </button>
-            <button
-              onClick={() => setAuthMode((prev) => (prev === 'login' ? 'register' : 'login'))}
-              className="w-full text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-            >
-              {authMode === 'login' ? '没有账号？去注册' : '已有账号？去登录'}
-            </button>
+            {publicAllowRegister && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode((prev) => (prev === 'login' ? 'register' : 'login'))
+                  setAuthError('')
+                  setAuthRegisterCode('')
+                }}
+                className="w-full text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                {authMode === 'login' ? '没有账号？去注册' : '已有账号？去登录'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -3317,9 +3432,12 @@ function App() {
                           }
                           className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950"
                         >
-                          <option value="default">默认（用户名+密码）</option>
-                          <option value="email_verification">邮箱验证</option>
+                          <option value="default">仅用户名 + 密码</option>
+                          <option value="email_verification">用户名 + 密码 + 邮箱验证码</option>
                         </select>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          选择「邮箱验证码」时，须在下方配置 SMTP，用户注册需填写邮箱并收验证码。
+                        </p>
                       </div>
                       <div>
                         <label className="mb-1 block text-xs text-slate-500">新用户赠送余额（元）</label>
@@ -3334,7 +3452,7 @@ function App() {
                       </div>
                     </div>
 
-                    <label className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                       <input
                         type="checkbox"
                         checked={systemSettings.emailVerificationEnabled}
@@ -3342,7 +3460,7 @@ function App() {
                           setSystemSettings((prev) => ({ ...prev, emailVerificationEnabled: event.target.checked }))
                         }
                       />
-                      <span>启用邮箱验证</span>
+                      <span>兼容：单独启用「邮箱验证」开关（与注册方式并存，发信配置见下）</span>
                     </label>
 
                     {(systemSettings.emailVerificationEnabled ||

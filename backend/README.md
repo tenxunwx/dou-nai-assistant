@@ -28,6 +28,7 @@ node scripts/install.js
 
 - `.env` 含密钥与数据库密码，**勿提交到 Git**（本目录已 `.gitignore` 忽略 `.env`）。
 - 易支付异步通知依赖公网可访问的 API 根地址，向导里可填 `PUBLIC_APP_URL`（如 `https://api.example.com`）；前端 SPA 根地址填 `FRONTEND_URL`。
+- 新库默认注册方式为「用户名 + 密码 + 邮箱验证码」，须在后台配置 **SMTP** 后用户才能收验证码注册；可在「用户注册」里改回「仅用户名 + 密码」。
 - 安装完成后用 `npm start` 或下文 PM2 / systemd 常驻运行。
 
 ## 检查是否启动成功

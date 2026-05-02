@@ -234,7 +234,8 @@ async function main() {
 
   console.log('\n======== 安装完成 ========')
   console.log(`启动服务: cd "${ROOT}" && npm start`)
-  console.log(`或生产环境建议使用 PM2/systemd 守护进程。\n`)
+  console.log(`或生产环境建议使用 PM2/systemd 守护进程。`)
+  console.log('提示：默认用户注册为「用户名+密码+邮箱验证码」，请在管理后台「系统设置 → 用户注册」中配置 SMTP 发信。\n')
 }
 
 main()
